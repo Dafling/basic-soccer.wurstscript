@@ -1,0 +1,110 @@
+package Common
+
+	import Globals
+	
+	public function IsFilterUnitHero() returns boolean
+		let pid = GetFilterUnit().getOwner().getId()
+		if Heroes[pid] != null
+			return GetFilterUnit() == Heroes[pid].getHandle()
+		else			
+			return false
+	
+	public function FilterPlayerStatePlaying() returns boolean
+		return GetFilterPlayer().getSlotState() == PLAYER_SLOT_STATE_PLAYING
+	
+	public function echo(string s)
+		DisplayTextToForce(GetPlayersAll(),s)
+	
+	public function echo(player p, string s)
+		DisplayTextToPlayer(p,0,0,s)
+	
+	public function unit.getHero() returns Hero
+		let pid = this.getOwner().getId()
+		return Heroes[pid]
+		
+	public function player.getHero() returns Hero
+		let pid = this.getId()
+		return Heroes[pid]
+		
+endpackage
+
+package Globals
+
+	import BallLib
+	
+	public group array TeamHeroes
+	public Hero array Heroes
+	
+	public constant real G 	= 2.3
+	public unit Flag 		= null
+	
+	init
+		TeamHeroes[1] = CreateGroup()
+		TeamHeroes[2] = CreateGroup()
+		
+		let pos = gg_rct_Center.getCenter()
+		let p = Player(PLAYER_NEUTRAL_PASSIVE)
+		Flag = createUnit( p, 'h004', pos, angle(0) ) // gg_unit_h004_0007
+		Flag.hide()
+	
+	public class Hero
+		unit h 					= null
+		boolean IsInAir         = false
+		int SlowDownTime    	= 0
+		int CantHoldBall    	= 0
+		real Vz                 = 0.0
+		static int Tallness 	= 100
+		
+		function getHandle() returns unit
+			return this.h
+		
+		function setSpeed(real speed)
+			this.h.setMoveSpeed(speed)
+		
+		function getHeight() returns real
+			return this.h.getFlyHeight()
+			
+		function setHeight(real h)
+			this.h.setFlyHeight(h, 0.0)
+		
+		function isOwner() returns boolean
+			return this.h == Ball.Owner
+		
+		construct(player p)
+			let pid = p.getId()
+			let loc_p = GetRandomLocInRect(gg_rct_LeftTeamStay)
+			unit u = CreateUnitAtLoc( p, 'H001', loc_p, 0 )
+			SetHeroLevel( u, 10, false )
+			TeamHeroes[1].addUnit(u)
+			
+			this.h = u
+			Heroes[pid] = this
+		
+endpackage
+
+package Main
+
+	import StdLib
+	
+	function initActions()
+		ClearMapMusic()
+		SetTimeOfDayScale( 0.0 )
+		SetTimeOfDay( 12.0 )
+		FogEnable( false )
+		FogMaskEnable( false )
+		
+		force f = GetPlayersMatching(Condition(function FilterPlayerStatePlaying))
+		ForForce( f, () -> begin 
+			let h = new Hero(GetEnumPlayer())
+		end)
+	
+	init
+		initActions()
+		
+endpackage
+
+package StdLib
+	import public Globals
+	import public Common
+	import public BallLib
+endpackage

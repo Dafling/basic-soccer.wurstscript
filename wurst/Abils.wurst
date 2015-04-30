@@ -1,0 +1,98 @@
+package Abils
+
+import StdLib
+import Core
+
+constant int ABILITY_SHORT_PASS     = 'A007'
+constant int ABILITY_KICK           = 'A00K'
+constant int ABILITY_LONG_PASS      = 'A008'
+constant int ABILITY_JUMP           = 'A009'
+
+function Shot_Common_Actions()
+	let h = Ball.GetPlayerOwner().getHero()
+	h.CantHoldBall = 10
+	Ball.CantInteractTime = 7
+	Ball.Owner = null
+	Players_Update_Speed()
+	Horizontal_Animations()
+
+function Z_Actions()
+	let h = GetTriggerUnit().getHero()
+	
+	if not h.isOwner()
+		return
+	
+	if h.IsInAir
+		// V+Z
+		Ball.Vz = 0
+		Ball.IsInAir = true
+		Ball.Direction = Ball.Owner.getFacingAngle()
+		Ball.setSpeed(522)
+	
+	Shot_Common_Actions()
+
+function X_Actions()
+	let u = GetTriggerUnit()
+	let loc_target = GetSpellTargetLoc()
+	
+	if Ball.Owner == u
+		Ball.Vz = 20
+		Ball.IsInAir = true
+		Ball.Direction = AngleBetweenPoints( Ball.GetLoc(), loc_target ).asAngleDegrees()
+		Ball.setSpeed(362)
+		
+		Shot_Common_Actions()
+		Flag.show()
+	
+	IssueImmediateOrder(u, "stop")
+	SetUnitFacingToFaceLocTimed(u, loc_target, 0)
+
+function C_Actions()
+	let h = GetTriggerUnit().getHero()
+	let loc_target = GetSpellTargetLoc()
+	
+	if h.IsInAir or not h.isOwner()
+		return
+	
+	h.SlowDownTime = 10
+	
+	Ball.ResetHeight()
+	Ball.Vz = 30
+	Ball.IsInAir = true
+	Ball.Direction = AngleBetweenPoints( Ball.GetLoc(), loc_target ).asAngleDegrees()
+	
+	let dist = DistanceBetweenPoints( Ball.GetLoc(), loc_target )
+	let speed = 10 * G * dist * 0.5 / Ball.Vz
+	Ball.setSpeed(speed)
+	
+	Shot_Common_Actions()
+	Flag.show()
+
+function V_Actions()
+	let h = GetTriggerUnit().getHero()
+	
+	if h.IsInAir or h.SlowDownTime > 0
+		return
+	
+	h.IsInAir = true
+	if not h.isOwner()
+		h.Vz = 20
+	else
+		h.Vz = 15
+
+function AbilityCast()
+	let sid = GetSpellAbilityId()
+	
+	if (sid == ABILITY_SHORT_PASS)
+		Z_Actions()
+	else if (sid == ABILITY_KICK)
+		X_Actions()
+	else if (sid == ABILITY_LONG_PASS)
+		C_Actions()
+	else if (sid == ABILITY_JUMP)
+		V_Actions()
+
+init
+	CreateTrigger(  )
+		..registerAnyUnitEvent( EVENT_PLAYER_UNIT_SPELL_CAST )
+		..addAction( function AbilityCast )

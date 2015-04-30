@@ -1,0 +1,178 @@
+package Core
+
+import StdLib
+
+constant real GROUND_HIT_FACTOR         = 50
+constant real GROUND_FRICTION_FACTOR    = 10
+	
+function Get_Ball()
+	let p = Ball.GetPlayerOwner()
+	let h = p.getHero()
+	
+	if Ball.Owner != null
+		echo( p, "TRIGSTR_298" )
+		h.CantHoldBall = 15
+	    
+	Ball.Owner = GetEnumUnit()
+	echo( Ball.GetPlayerOwner(), "TRIGSTR_295" )
+	
+	Ball.ReduceSpeedBy(1000)
+	Ball.setScale(350)
+
+function CanUnitHeadBall(unit u) returns boolean
+	let h = u.getHero()
+	
+	let b1 = h.IsInAir
+	let b2 = h.Vz >= 0
+	
+	return b1 and b2
+
+function CanUnitGetBall(unit u) returns boolean
+	let h = u.getHero()
+	
+	let ball_h = Ball.getHeight()
+	let unit_h = h.getHeight()
+	
+	let b1 = Ball.CantInteractTime <= 0
+	let b2 = h.CantHoldBall <= 0
+	let b3 = not h.isOwner()
+	let b4 = (ball_h >= unit_h) and (ball_h <= unit_h + Hero.Tallness)
+	let b5 = IsUnitEnemy(u, Ball.GetPlayerOwner())
+	
+	return b1 and b2 and b3 and b4 and b5
+
+function Set_Ball_Owner()
+	let cond = Condition(function IsFilterUnitHero)
+	let g = GetUnitsInRangeOfLocMatching(100, Ball.GetLoc(), cond)
+	
+	ForGroup( g, () -> begin
+		let u = GetEnumUnit()
+		let h = u.getHero()
+		
+		if CanUnitGetBall(u)
+			if not CanUnitHeadBall(u)
+				Flag.hide()
+				if (h.SlowDownTime == 0) // && !Interval_001_Execution
+					Get_Ball()
+	end)
+    
+function Flag_Move()
+	let h = Ball.getHeight()
+	let v = Ball.getSpeed()
+	let Vz = Ball.Vz
+	
+	if ( v > Ball.MinimumSpeed )
+		let dist = 0.1*v*(Vz+SquareRoot(Vz*Vz+2*G*h))/G
+		let pos = Ball.getPos().polarOffset( Ball.Direction, dist )
+		Flag.setPos(pos)
+	else
+		Flag.setPos(Ball.getPos())
+    
+function Vertical_Animations()
+	let b1 = Ball.Vz < 0
+	let b2 = Ball.getHeight() <= Ball.DefaultHeight
+	
+	//Ball_HitsGround()
+	if b1 and b2
+		//BallHitsGround_Actions()
+		Ball.ReduceSpeedBy(GROUND_HIT_FACTOR)
+		Ball.ResetHeight()
+		
+		if Ball.Vz.abs() < G*5.0
+			Flag.hide()
+			Ball.IsInAir = false
+			Ball.Vz = 0
+		else
+			Ball.Vz *= (-0.6)
+	else
+		// Ball.UpdateHeight()
+		Ball.setHeight( Ball.getHeight() + Ball.Vz )
+		Ball.Vz -= G
+	
+	Flag_Move()
+    
+public function Horizontal_Animations()
+	let pos = Ball.getPos().polarOffset(Ball.Direction, 100)
+	
+	if Ball.getSpeed() <= Ball.MinimumSpeed
+		Ball.Stop()
+		Ball.ReduceSpeedBy( 1000 )
+		Ball.setScale( 0 )
+	else
+		Ball.setScale( 1.5 * Ball.getSpeed() )
+		Ball.moveTo(pos)
+    
+function Ball_PlaceInFrontOfOwner()
+	let facing = Ball.Owner.getFacingAngle()
+	let pos = Ball.Owner.getPos().polarOffset(facing, 50)
+	
+	Ball.setPos( pos )
+	Ball.setFacing( facing )
+	Ball.setHeight( Ball.Owner.getFlyHeight() + Ball.DefaultHeight )
+    
+function Ball_Periodic_Actions()
+	if Ball.Owner == null
+		Horizontal_Animations()
+        
+		if Ball.IsInAir
+			Vertical_Animations()
+		else
+			Ball.ReduceSpeedBy(GROUND_FRICTION_FACTOR)
+	else
+		Ball_PlaceInFrontOfOwner()
+
+function Jump_Periodic_Actions()
+	group g = CreateGroup()
+	GroupAddGroup(TeamHeroes[1], g)
+	GroupAddGroup(TeamHeroes[2], g)
+	
+	ForGroup(g, () -> begin
+		let h = GetEnumUnit().getHero()
+		
+		if h.IsInAir
+			h.setHeight( h.getHeight() + h.Vz )
+			h.Vz -= G
+			
+			if h.getHeight() <= 0.01
+				h.IsInAir = false
+				h.setHeight(0)
+				h.Vz = 0
+	end)
+    
+public function Players_Update_Speed()
+	conditionfunc cond = Condition(function IsFilterUnitHero)
+	group g = GetUnitsInRectMatching(GetPlayableMapRect(), cond)
+	
+	ForGroup( g, () -> begin
+		let h = GetEnumUnit().getHero()
+		
+		if h.SlowDownTime == 0
+			if h.isOwner()
+				h.setSpeed(200)
+			else
+				h.setSpeed(290)
+		else
+			h.SlowDownTime -= 1
+			h.setSpeed(0.5*290)
+	end)
+    
+function Players_Update_CantHoldBall_Value()
+	force f = GetPlayersMatching(Condition(function FilterPlayerStatePlaying))
+	ForForce( f, () -> begin
+		let h = GetEnumPlayer().getHero()
+		h.CantHoldBall = max(0, h.CantHoldBall-1)
+	end)
+    
+function Periodic_10()
+	Ball_Periodic_Actions()
+	Players_Update_CantHoldBall_Value()
+	Set_Ball_Owner()
+	Ball.CantInteractTime = max(0, Ball.CantInteractTime-1)
+	Players_Update_Speed()
+	Jump_Periodic_Actions()
+    
+init
+	CreateTrigger()
+		..registerTimerEvent( 0.1, true )
+		..addAction( function Periodic_10 )
+	

@@ -1,0 +1,61 @@
+package BallLib
+
+unit BALL = null
+
+public class Ball
+	static real DefaultHeight 	= 10.0
+	static real MinimumSpeed	= 1.0
+	
+	static boolean IsInAir      = false
+	static int CantInteractTime = 0
+	static angle Direction      = angle(0)
+	static real Vz              = 0.0
+	static unit Owner           = null
+		
+	static function getPos() returns vec2
+		return BALL.getPos()
+		
+	static function setPos(vec2 pos)
+		BALL.setPos(pos)
+
+	static function moveTo(vec2 pos)
+		BALL.issuePointOrder( "move", pos )
+
+	static function getHeight() returns real
+		return BALL.getFlyHeight()
+
+	static function setHeight(real h)
+		BALL.setFlyHeight( h, 0.0 )
+	
+	static function getSpeed() returns real
+		return BALL.getMoveSpeed()
+
+	static function setSpeed(real speed)
+		BALL.setMoveSpeed(min(speed, 522))
+
+	static function setScale(real scale)
+		BALL.setTimeScale(scale/100.)
+		
+	static function setFacing(angle facing)
+		BALL.setFacing(facing)
+
+	static function ReduceSpeedBy(real factor)
+		Ball.setSpeed( max( Ball.MinimumSpeed, Ball.getSpeed() - factor ) )
+
+	static function Stop()
+		IssueImmediateOrder(BALL, "stop")
+		
+	static function ResetHeight()
+		Ball.setHeight(Ball.DefaultHeight)
+	
+	static function GetPlayerOwner() returns player
+		return Ball.Owner.getOwner()
+		
+	static function GetLoc() returns location
+		return GetUnitLoc(BALL)
+	
+init
+	let pos = gg_rct_Center.getCenter()
+	let p = Player(PLAYER_NEUTRAL_PASSIVE)
+	BALL = createUnit( p, 'h000', pos, angle(0) ) //gg_unit_h000_0001
+	
