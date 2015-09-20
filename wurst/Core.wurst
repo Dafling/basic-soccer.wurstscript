@@ -5,7 +5,7 @@ import StdLib
 constant real GROUND_HIT_FACTOR         = 50
 constant real GROUND_FRICTION_FACTOR    = 10
 	
-function Get_Ball()
+function Get_Ball(unit u)
 	let p = Ball.GetPlayerOwner()
 	let h = p.getHero()
 	
@@ -13,7 +13,7 @@ function Get_Ball()
 		echo( p, "TRIGSTR_298" )
 		h.CantHoldBall = 15
 	    
-	Ball.Owner = GetEnumUnit()
+	Ball.Owner = u
 	echo( Ball.GetPlayerOwner(), "TRIGSTR_295" )
 	
 	Ball.ReduceSpeedBy(1000)
@@ -38,30 +38,25 @@ function CanUnitGetBall(unit u) returns boolean
 	let b3 = not h.isOwner()
 	let b4 = (ball_h >= unit_h) and (ball_h <= unit_h + Hero.Tallness)
 	let b5 = IsUnitEnemy(u, Ball.GetPlayerOwner())
+	let b6 = h.SlowDownTime <= 0
 	
-	return b1 and b2 and b3 and b4 and b5
+	return b1 and b2 and b3 and b4 and b5 and b6
 
 function Set_Ball_Owner()
-	let cond = Condition(function IsFilterUnitHero)
-	let g = GetUnitsInRangeOfLocMatching(100, Ball.GetLoc(), cond)
+	let g = GetUnitsInRangeOfLocMatching(100, Ball.GetLoc(), Condition(function IsFilterUnitHero))
 	
-	ForGroup( g, () -> begin
-		let u = GetEnumUnit()
-		let h = u.getHero()
-		
+	for u in g
 		if CanUnitGetBall(u)
 			if not CanUnitHeadBall(u)
 				Flag.hide()
-				if (h.SlowDownTime == 0) // && !Interval_001_Execution
-					Get_Ball()
-	end)
+				Get_Ball(u)
     
 function Flag_Move()
 	let h = Ball.getHeight()
 	let v = Ball.getSpeed()
 	let Vz = Ball.Vz
 	
-	if ( v > Ball.MinimumSpeed )
+	if v > Ball.MinimumSpeed
 		let dist = 0.1*v*(Vz+SquareRoot(Vz*Vz+2*G*h))/G
 		let pos = Ball.getPos().polarOffset( Ball.Direction, dist )
 		Flag.setPos(pos)
@@ -122,12 +117,9 @@ function Ball_Periodic_Actions()
 		Ball_PlaceInFrontOfOwner()
 
 function Jump_Periodic_Actions()
-	group g = CreateGroup()
-	GroupAddGroup(TeamHeroes[1], g)
-	GroupAddGroup(TeamHeroes[2], g)
-	
-	ForGroup(g, () -> begin
-		let h = GetEnumUnit().getHero()
+	let g = GetUnitsInRectMatching(GetPlayableMapRect(), Condition(function IsFilterUnitHero))
+	for u in g
+		let h = u.getHero()
 		
 		if h.IsInAir
 			h.setHeight( h.getHeight() + h.Vz )
@@ -137,14 +129,11 @@ function Jump_Periodic_Actions()
 				h.IsInAir = false
 				h.setHeight(0)
 				h.Vz = 0
-	end)
     
 public function Players_Update_Speed()
-	conditionfunc cond = Condition(function IsFilterUnitHero)
-	group g = GetUnitsInRectMatching(GetPlayableMapRect(), cond)
-	
-	ForGroup( g, () -> begin
-		let h = GetEnumUnit().getHero()
+	let g = GetUnitsInRectMatching(GetPlayableMapRect(), Condition(function IsFilterUnitHero))
+	for u in g
+		let h = u.getHero()
 		
 		if h.SlowDownTime == 0
 			if h.isOwner()
@@ -154,10 +143,9 @@ public function Players_Update_Speed()
 		else
 			h.SlowDownTime -= 1
 			h.setSpeed(0.5*290)
-	end)
     
 function Players_Update_CantHoldBall_Value()
-	force f = GetPlayersMatching(Condition(function FilterPlayerStatePlaying))
+	let f = GetPlayersMatching(Condition(function FilterPlayerStatePlaying))
 	ForForce( f, () -> begin
 		let h = GetEnumPlayer().getHero()
 		h.CantHoldBall = max(0, h.CantHoldBall-1)

@@ -81,16 +81,15 @@ function V_Actions()
 		h.Vz = 15
 
 function AbilityCast()
-	let sid = GetSpellAbilityId()
-	
-	if (sid == ABILITY_SHORT_PASS)
-		Z_Actions()
-	else if (sid == ABILITY_KICK)
-		X_Actions()
-	else if (sid == ABILITY_LONG_PASS)
-		C_Actions()
-	else if (sid == ABILITY_JUMP)
-		V_Actions()
+	switch GetSpellAbilityId()
+		case ABILITY_SHORT_PASS
+			Z_Actions()
+		case ABILITY_KICK
+			X_Actions()
+		case ABILITY_LONG_PASS
+			C_Actions()
+		case ABILITY_JUMP
+			V_Actions()
 
 init
 	CreateTrigger(  )

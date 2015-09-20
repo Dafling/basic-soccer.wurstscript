@@ -1,33 +1,3 @@
-package Common
-
-	import Globals
-	
-	public function IsFilterUnitHero() returns boolean
-		let pid = GetFilterUnit().getOwner().getId()
-		if Heroes[pid] != null
-			return GetFilterUnit() == Heroes[pid].getHandle()
-		else			
-			return false
-	
-	public function FilterPlayerStatePlaying() returns boolean
-		return GetFilterPlayer().getSlotState() == PLAYER_SLOT_STATE_PLAYING
-	
-	public function echo(string s)
-		DisplayTextToForce(GetPlayersAll(),s)
-	
-	public function echo(player p, string s)
-		DisplayTextToPlayer(p,0,0,s)
-	
-	public function unit.getHero() returns Hero
-		let pid = this.getOwner().getId()
-		return Heroes[pid]
-		
-	public function player.getHero() returns Hero
-		let pid = this.getId()
-		return Heroes[pid]
-		
-endpackage
-
 package Globals
 
 	import BallLib
@@ -82,6 +52,36 @@ package Globals
 		
 endpackage
 
+package Common
+
+	import Globals
+	
+	public function IsFilterUnitHero() returns boolean
+		let pid = GetFilterUnit().getOwner().getId()
+		if Heroes[pid] != null
+			return GetFilterUnit() == Heroes[pid].getHandle()
+		else			
+			return false
+	
+	public function FilterPlayerStatePlaying() returns boolean
+		return GetFilterPlayer().getSlotState() == PLAYER_SLOT_STATE_PLAYING
+	
+	public function echo(string s)
+		DisplayTextToForce(GetPlayersAll(),s)
+	
+	public function echo(player p, string s)
+		DisplayTextToPlayer(p,0,0,s)
+	
+	public function unit.getHero() returns Hero
+		let pid = this.getOwner().getId()
+		return Heroes[pid]
+		
+	public function player.getHero() returns Hero
+		let pid = this.getId()
+		return Heroes[pid]
+		
+endpackage
+
 package Main
 
 	import StdLib
@@ -93,7 +93,7 @@ package Main
 		FogEnable( false )
 		FogMaskEnable( false )
 		
-		force f = GetPlayersMatching(Condition(function FilterPlayerStatePlaying))
+		let f = GetPlayersMatching(Condition(function FilterPlayerStatePlaying))
 		ForForce( f, () -> begin 
 			let h = new Hero(GetEnumPlayer())
 		end)
